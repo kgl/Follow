@@ -51,6 +51,23 @@ const cloneStylesElement = (_mutationRecord?: MutationRecord) => {
         children: $style.innerHTML,
       }),
     )
+
+    const styles = getLinkedStaticStyleSheets()
+
+    for (const style of styles) {
+      let key = weakMapElementKey.get(style.ref)
+      if (!key) {
+        key = nanoid(8)
+        weakMapElementKey.set(style.ref, key)
+      }
+
+      reactNodes.push(
+        createElement(MemoedDangerousHTMLStyle, {
+          key,
+          children: style.cssText,
+        }),
+      )
+    }
   }
 
   return reactNodes
@@ -82,20 +99,21 @@ export const ShadowDOM: FC<PropsWithChildren<React.HTMLProps<HTMLElement>>> & {
   const dark = useIsDark()
 
   const uiFont = useUISettingKey("uiFontFamily")
-  const staticStyleSheet = useState(getLinkedStaticStyleSheet)[0]
 
   return (
     <root.div {...rest}>
       <ShadowDOMContext.Provider value={true}>
         <div
-          style={useMemo(() => ({
-            fontFamily: uiFont,
-          }), [uiFont])}
+          style={useMemo(
+            () => ({
+              fontFamily: uiFont,
+            }),
+            [uiFont],
+          )}
           id="shadow-html"
           data-theme={dark ? "dark" : "light"}
           className="font-theme"
         >
-          <MemoedDangerousHTMLStyle>{staticStyleSheet}</MemoedDangerousHTMLStyle>
           {stylesElements}
           {props.children}
         </div>
@@ -106,15 +124,18 @@ export const ShadowDOM: FC<PropsWithChildren<React.HTMLProps<HTMLElement>>> & {
 
 ShadowDOM.useIsShadowDOM = () => useContext(ShadowDOMContext)
 
-function getLinkedStaticStyleSheet() {
-  let cssText = ""
+function getLinkedStaticStyleSheets() {
+  const cssArray = [] as { cssText: string, ref: HTMLLinkElement }[]
 
   for (const sheet of document.styleSheets) {
     if (!sheet.href) continue
     const rules = sheet.cssRules || sheet.rules
     for (const rule of rules) {
-      cssText += `${rule.cssText}\n`
+      cssArray.push({
+        cssText: rule.cssText,
+        ref: sheet.ownerNode as HTMLLinkElement,
+      })
     }
   }
-  return cssText
+  return cssArray
 }
