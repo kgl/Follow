@@ -1,5 +1,6 @@
 import { useUISettingKey } from "@renderer/atoms/settings/ui"
 import { useIsDark } from "@renderer/hooks/common"
+import { nextFrame } from "@renderer/lib/dom"
 import { nanoid } from "nanoid"
 import type { FC, PropsWithChildren, ReactNode } from "react"
 import {
@@ -39,6 +40,7 @@ const weakMapElementKey = new WeakMap<
   string
 >()
 const cloneStylesElement = (_mutationRecord?: MutationRecord) => {
+  const now = Date.now()
   const $styles = document.head.querySelectorAll("style").values()
   const reactNodes = [] as ReactNode[]
 
@@ -76,6 +78,12 @@ const cloneStylesElement = (_mutationRecord?: MutationRecord) => {
       )
     }
   }
+
+  console.info("cloneStylesElement", Date.now() - now)
+
+  nextFrame(() => {
+    console.info("nextFrame", Date.now() - now)
+  })
 
   return reactNodes
 }
