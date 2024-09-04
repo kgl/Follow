@@ -130,12 +130,15 @@ function getLinkedStaticStyleSheets() {
   for (const sheet of document.styleSheets) {
     if (!sheet.href) continue
     const rules = sheet.cssRules || sheet.rules
+    let cssText = ""
     for (const rule of rules) {
-      cssArray.push({
-        cssText: rule.cssText,
-        ref: sheet.ownerNode as HTMLLinkElement,
-      })
+      cssText += rule.cssText
     }
+
+    cssArray.push({
+      cssText,
+      ref: sheet.ownerNode as HTMLLinkElement,
+    })
   }
   return cssArray
 }
