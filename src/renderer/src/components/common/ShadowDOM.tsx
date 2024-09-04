@@ -22,7 +22,8 @@ const MemoedDangerousHTMLStyle: FC<
   } & React.DetailedHTMLProps<
     React.StyleHTMLAttributes<HTMLStyleElement>,
     HTMLStyleElement
-  > & Record<string, unknown>
+  > &
+  Record<string, unknown>
 > = memo(({ children, ...rest }) => (
   <style
     {...rest}
@@ -139,21 +140,49 @@ export const ShadowDOM: FC<PropsWithChildren<React.HTMLProps<HTMLElement>>> & {
 
 ShadowDOM.useIsShadowDOM = () => useContext(ShadowDOMContext)
 
+const cacheCssTextMap = {} as Record<string, string>
+
+// @ts-expect-error
+window.cacheCssTextMap = cacheCssTextMap
 function getLinkedStaticStyleSheets() {
+  const $links = document.head
+    .querySelectorAll("link[rel=stylesheet]")
+    .values() as unknown as HTMLLinkElement[]
+
+  const styleSheetMap = new WeakMap<
+    Element | ProcessingInstruction,
+    CSSStyleSheet
+  >()
+
   const cssArray = [] as { cssText: string, ref: HTMLLinkElement }[]
 
   for (const sheet of document.styleSheets) {
     if (!sheet.href) continue
-    const rules = sheet.cssRules || sheet.rules
-    let cssText = ""
-    for (const rule of rules) {
-      cssText += rule.cssText
+    if (!sheet.ownerNode) continue
+    styleSheetMap.set(sheet.ownerNode, sheet)
+  }
+
+  for (const $link of $links) {
+    const sheet = styleSheetMap.get($link)
+    if (!sheet) continue
+    if (!sheet.href) continue
+    const hasCache = cacheCssTextMap[sheet.href]
+    if (!hasCache) {
+      if (!sheet.href) continue
+      const rules = sheet.cssRules || sheet.rules
+      let cssText = ""
+      for (const rule of rules) {
+        cssText += rule.cssText
+      }
+
+      cacheCssTextMap[sheet.href] = cssText
     }
 
     cssArray.push({
-      cssText,
-      ref: sheet.ownerNode as HTMLLinkElement,
+      cssText: cacheCssTextMap[sheet.href],
+      ref: $link,
     })
   }
+
   return cssArray
 }
