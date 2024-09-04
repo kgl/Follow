@@ -15,18 +15,24 @@ import root from "react-shadow"
 
 const ShadowDOMContext = createContext(false)
 
-const MemoedDangerousHTMLStyle: FC<{ children: string }> = memo(
-  ({ children }) => (
-    <style
-      dangerouslySetInnerHTML={useMemo(
-        () => ({
-          __html: children,
-        }),
-        [children],
-      )}
-    />
-  ),
-)
+const MemoedDangerousHTMLStyle: FC<
+  {
+    children: string
+  } & React.DetailedHTMLProps<
+    React.StyleHTMLAttributes<HTMLStyleElement>,
+    HTMLStyleElement
+  > & Record<string, unknown>
+> = memo(({ children, ...rest }) => (
+  <style
+    {...rest}
+    dangerouslySetInnerHTML={useMemo(
+      () => ({
+        __html: children,
+      }),
+      [children],
+    )}
+  />
+))
 
 const weakMapElementKey = new WeakMap<
   HTMLStyleElement | HTMLLinkElement,
@@ -65,6 +71,7 @@ const cloneStylesElement = (_mutationRecord?: MutationRecord) => {
         createElement(MemoedDangerousHTMLStyle, {
           key,
           children: style.cssText,
+          ["data-href"]: style.ref.href,
         }),
       )
     }
